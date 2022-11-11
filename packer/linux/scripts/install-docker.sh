@@ -82,6 +82,7 @@ case "${MACHINE}" in
 esac
 
 
+echo "HI"
 sudo curl --location --fail --silent --output "${DOCKER_CLI_DIR}/docker-buildx" "https://github.com/docker/buildx/releases/download/v${DOCKER_BUILDX_VERSION}/buildx-v${DOCKER_BUILDX_VERSION}.linux-${BUILDX_ARCH}"
 sudo chmod +x "${DOCKER_CLI_DIR}/docker-buildx"
 docker buildx version

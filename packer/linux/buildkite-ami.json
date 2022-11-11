@@ -1,87 +1,80 @@
 {
-  "variables": {
-    "region": "us-east-1",
-    "arch": "x86_64",
-    "goarch": "amd64",
-    "instance_type": "m5.xlarge"
-  },
+    "variables": {
+        "region": "us-east-1",
+        "arch": "x86_64",
+        "goarch": "amd64",
+        "instance_type": "m5.xlarge"
+    },
 
-  "builders": [
-    {
-      "type": "amazon-ebs",
-      "region": "{{user `region`}}",
-      "source_ami_filter": {
-        "filters": {
-          "name": "amzn2-ami-kernel-5.10-hvm-2.0.*-gp2",
-          "architecture": "{{user `arch`}}",
-          "virtualization-type": "hvm"
+    "builders": [
+        {
+            "type": "qemu",
+            "ssh_username": "ec2-user",
+            "ssh_password": "ppp",
+            "iso_url": "https://cdn.amazonlinux.com/os-images/2.0.20221004.0/kvm/amzn2-kvm-2.0.20221004.0-x86_64.xfs.gpt.qcow2",
+            "iso_checksum": "69f560586d0d454eb60779ba3e37eacee7dbe8d25560b57bb17306ff405004e2",
+            "accelerator": "kvm",
+            "disk_image": true,
+            "format": "qcow2",
+            "cd_files": ["./user-data", "./meta-data"],
+            "cd_label": "cidata",
+            "memory": 5120
+        }
+    ],
+    "provisioners": [
+        {
+            "type": "file",
+            "source": "conf",
+            "destination": "/tmp"
         },
-        "owners": ["amazon"],
-        "most_recent": true
-      },
-      "instance_type": "{{user `instance_type`}}",
-      "ssh_username": "ec2-user",
-      "ami_name": "buildkite-stack-linux-{{user `arch`}}-{{isotime | clean_resource_name}}",
-      "ami_description": "Buildkite Elastic Stack (Amazon Linux 2 LTS w/ docker)",
-      "ami_groups": ["all"]
-    }
-  ],
-  "provisioners": [
-    {
-      "type": "file",
-      "source": "conf",
-      "destination": "/tmp"
-    },
-    {
-      "type": "file",
-      "source": "../../plugins",
-      "destination": "/tmp/plugins"
-    },
-    {
-      "type": "shell",
-      "script": "scripts/install-utils.sh"
-    },
-    {
-      "type": "shell",
-      "script": "scripts/install-cloudwatch-agent.sh"
-    },
-    {
-      "type": "shell",
-      "script": "scripts/install-lifecycled.sh"
-    },
-    {
-      "type": "shell",
-      "script": "scripts/install-docker.sh"
-    },
-    {
-      "type": "shell",
-      "script": "scripts/install-buildkite-agent.sh"
-    },
-    {
-      "type": "shell",
-      "script": "scripts/install-s3secrets-helper.sh"
-    },
-    {
-      "type": "shell",
-      "script": "scripts/install-git-lfs.sh"
-    },
-    {
-      "type": "shell",
-      "script": "scripts/install-session-manager-plugin.sh"
-    },
-    {
-      "type": "shell",
-      "script": "scripts/install-nvme-cli.sh"
-    },
-    {
-      "type": "shell",
-      "script": "scripts/install-nix.sh"
-    },    
-    {
-      "type": "shell",
-      "inline": [
-        "rm /home/ec2-user/.ssh/authorized_keys"
-      ]
-    }
-  ]
+        {
+            "type": "file",
+            "source": "../../plugins",
+            "destination": "/tmp/plugins"
+        },
+        {
+            "type": "shell",
+            "script": "scripts/install-utils.sh"
+        },
+        {
+            "type": "shell",
+            "script": "scripts/install-cloudwatch-agent.sh"
+        },
+        {
+            "type": "shell",
+            "script": "scripts/install-lifecycled.sh"
+        },
+        {
+            "type": "shell",
+            "script": "scripts/install-docker.sh"
+        },
+        {
+            "type": "shell",
+            "script": "scripts/install-buildkite-agent.sh"
+        },
+        {
+            "type": "shell",
+            "script": "scripts/install-s3secrets-helper.sh"
+        },
+        {
+            "type": "shell",
+            "script": "scripts/install-git-lfs.sh"
+        },
+        {
+            "type": "shell",
+            "script": "scripts/install-session-manager-plugin.sh"
+        },
+        {
+            "type": "shell",
+            "script": "scripts/install-nvme-cli.sh"
+        },
+        {
+            "type": "shell",
+            "script": "scripts/install-nix.sh"
+        },
+        {
+            "type": "shell",
+            "inline": ["rm /home/ec2-user/.ssh/authorized_keys"]
+        }
+    ]
 }
