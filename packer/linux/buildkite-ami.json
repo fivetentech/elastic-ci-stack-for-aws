@@ -1,6 +1,6 @@
 {
     "variables": {
-        "region": "us-east-1",
+        "region": "eu-central-1",
         "arch": "x86_64",
         "goarch": "amd64",
         "instance_type": "m5.xlarge"
@@ -18,7 +18,8 @@
             "format": "qcow2",
             "cd_files": ["./user-data", "./meta-data"],
             "cd_label": "cidata",
-            "memory": 5120
+            "memory": 5120,
+	    "headless": true
         }
     ],
     "provisioners": [
