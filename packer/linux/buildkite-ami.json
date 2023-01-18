@@ -75,10 +75,13 @@
     },
     {
       "type": "shell",
+      "script": "scripts/install-nix.sh"
+    },    
+    {
+      "type": "shell",
       "inline": [
         "rm /home/ec2-user/.ssh/authorized_keys"
       ]
     }
   ]
 }
-
