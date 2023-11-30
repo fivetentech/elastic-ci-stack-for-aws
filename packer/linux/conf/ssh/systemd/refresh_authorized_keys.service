@@ -1,0 +1,6 @@
+[Unit]
+Description=Download ssh authorized_keys file from s3
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/refresh_authorized_keys

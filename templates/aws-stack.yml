@@ -41,8 +41,9 @@ Metadata:
         - BuildkiteAgentTags
         - BuildkiteAgentTimestampLines
         - BuildkiteAgentExperiments
-        - EnableAgentGitMirrorsExperiment
+        - BuildkiteAgentEnableGitMirrors
         - BuildkiteAgentTracingBackend
+        - BuildkiteAgentCancelGracePeriod
         - BuildkiteTerminateInstanceAfterJob
         - BuildkiteAdditionalSudoPermissions
         - BuildkiteWindowsAdministrator
@@ -55,7 +56,7 @@ Metadata:
         - VpcId
         - Subnets
         - AvailabilityZones
-        - SecurityGroupId
+        - SecurityGroupIds
         - AssociatePublicIpAddress
 
       - Label:
@@ -64,11 +65,10 @@ Metadata:
         - ImageId
         - ImageIdParameter
         - InstanceOperatingSystem
-        - InstanceType
+        - InstanceTypes
         - EnableInstanceStorage
         - AgentsPerInstance
         - KeyName
-        - SpotPrice
         - SecretsBucket
         - SecretsBucketRegion
         - SecretsBucketEncryption
@@ -80,7 +80,7 @@ Metadata:
         - RootVolumeName
         - RootVolumeType
         - RootVolumeEncrypted
-        - ManagedPolicyARN
+        - ManagedPolicyARNs
         - InstanceRoleName
         - InstanceRolePermissionsBoundaryARN
         - IMDSv2Tokens
@@ -93,10 +93,13 @@ Metadata:
         - MinSize
         - MaxSize
         - OnDemandPercentage
+        - SpotAllocationStrategy
         - ScaleOutFactor
         - ScaleInIdlePeriod
         - ScaleOutForWaitingJobs
         - InstanceCreationTimeout
+        - ScalerEventSchedulePeriod
+        - ScalerMinPollInterval
 
       - Label:
           default: Cost Allocation Configuration
@@ -169,7 +172,7 @@ Parameters:
     Default: "false"
 
   BuildkiteAgentExperiments:
-    Description: Agent experiments to enable, comma delimited. See https://github.com/buildkite/agent/blob/master/EXPERIMENTS.md.
+    Description: Agent experiments to enable, comma delimited. See https://github.com/buildkite/agent/blob/-/EXPERIMENTS.md.
     Type: String
     Default: ""
 
@@ -181,7 +184,7 @@ Parameters:
   BuildkiteAgentScalerVersion:
     Description: Version of the buildkite-agent-scaler to use
     Type: String
-    Default: "1.3.2"
+    Default: "1.7.0"
 
   BuildkiteAgentTracingBackend:
     Description: The tracing backend to use for CI tracing. See https://buildkite.com/docs/agent/v3/tracing
@@ -192,6 +195,12 @@ Parameters:
       - "opentelemetry"
     Default: ""
 
+  BuildkiteAgentCancelGracePeriod:
+    Description: The number of seconds a canceled or timed out job is given to gracefully terminate and upload its artifacts.
+    Type: Number
+    Default: 60
+    MinValue: 1
+
   BuildkiteTerminateInstanceAfterJob:
     Description: Set to "true" to terminate the instance after a job has completed.
     Type: String
@@ -201,7 +210,7 @@ Parameters:
     Default: "false"
 
   BuildkiteAdditionalSudoPermissions:
-    Description: Optional - Comma separated list of commands to allow the buildkite-agent user to run using sudo.
+    Description: Optional - Comma separated list of commands to allow the buildkite-agent user to run using sudo. Note that the commands should be fully qualified paths to executables.
     Type: String
     Default: ""
 
@@ -278,29 +287,35 @@ Parameters:
     Description: Optional - Comma separated list of AZs that subnets are created in (if Subnets parameter is not specified)
     Default: ""
 
-  InstanceType:
-    Description: Instance type. Comma-separated list with 1-4 instance types. The order is a prioritized preference for launching OnDemand instances, and a non-prioritized list of types to consider for Spot Instances (where used).
+  InstanceTypes:
+    Description: Comma-separated list with 1-4 instance types. The order is a prioritized preference for launching OnDemand instances, and a non-prioritized list of types to consider for Spot Instances (where used).
     Type: String
     Default: t3.large
     MinLength: 1
-    AllowedPattern: "^[\\w\\.]+(,[\\w\\.]*){0,3}$"
+    AllowedPattern: "^[\\w-\\.]+(,[\\w\\.]*){0,3}$"
     ConstraintDescription: "must contain 1-4 instance types separated by commas. No space before/after the comma."
-
-  SpotPrice:
-    Description: Maximum spot price to use for the instances, in instance cost per hour. Values >0 will result in 100% of instances being spot. 0 means only use normal (non-spot) instances. This parameter is deprecated - we recommend setting to 0 and using OnDemandPercentage to opt into spot instances.
-    Type: String
-    Default: 0
 
   MaxSize:
     Description: Maximum number of instances
     Type: Number
     Default: 10
-    MinValue: 1
+    MinValue: 0
 
   MinSize:
     Description: Minimum number of instances
     Type: Number
     Default: 0
+    MinValue: 0
+
+  ScalerEventSchedulePeriod:
+    Description: How often the Event Schedule for buildkite-agent-scaler is triggered. Should be an expression with units, e.g. "30 seconds", "1 minute", "5 minutes".
+    Type: String
+    Default: "1 minute"
+
+  ScalerMinPollInterval:
+    Description: Minimum interval at which the auto scaler should poll the AWS API
+    Type: String
+    Default: "10s"
 
   OnDemandPercentage:
     Description: Percentage of total instances that should launch as OnDemand. Default is 100% OnDemand - reduce this to use some Spot Instances when they're available and cheaper than the OnDemand price. A value of 70 means 70% OnDemand and 30% Spot Instances.
@@ -308,6 +323,16 @@ Parameters:
     Default: 100
     MinValue: 0
     MaxValue: 100
+
+  SpotAllocationStrategy:
+    Description: The strategy for allocating Spot Instances when launching or replacing instances. If choosing `capacity-optimized-prioritized`, the order you specify in InstanceTypes will be the priority.
+    Type: String
+    Default: capacity-optimized
+    AllowedValues:
+      - price-capacity-optimized
+      - capacity-optimized
+      - lowest-price
+      - capacity-optimized-prioritized
 
   ScaleOutFactor:
     Description: A decimal factor to apply to scale out changes to speed up or slow down scale-out
@@ -356,7 +381,7 @@ Parameters:
       - "false"
     Default: "false"
 
-  SecurityGroupId:
+  SecurityGroupIds:
     Type: String
     Description: Optional - Comma separated list of security group ids to assign to instances
     Default: ""
@@ -371,7 +396,7 @@ Parameters:
     Description: Optional - Custom AMI SSM Parameter to use for instances (must be based on the stack's AMI)
     Default: ""
 
-  ManagedPolicyARN:
+  ManagedPolicyARNs:
     Type: CommaDelimitedList
     Description: Optional - Comma separated list of managed IAM policy ARNs to attach to the instance role
     Default: ""
@@ -462,7 +487,10 @@ Parameters:
 
   EnableInstanceStorage:
     Type: String
-    Description: Mount available NVMe Instance Storage at /mnt/ephemeral
+    Description: >
+      Mount available NVMe Instance Storage at /mnt/ephemeral, and use it to store docker images and
+      containers, and the build working directory. You must ensure that the instance types have
+      instance storage available for this to have any effect. See https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-store-volumes.html
     AllowedValues:
       - "true"
       - "false"
@@ -486,9 +514,9 @@ Parameters:
     Description: The value of the Cost Allocation Tag used for billing purposes
     Default: "buildkite-elastic-ci-stack-for-aws"
 
-  EnableAgentGitMirrorsExperiment:
+  BuildkiteAgentEnableGitMirrors:
     Type: String
-    Description: Enables the git-mirrors experiment in the agent
+    Description: Enables git-mirrors in the agent
     AllowedValues:
       - "true"
       - "false"
@@ -505,7 +533,7 @@ Parameters:
   InstanceName:
     Type: String
     Description: Optional - Customise the EC2 instance Name tag
-    Default: "buildkite-agent"
+    Default: ""
 
 Rules:
   HasToken:
@@ -552,14 +580,11 @@ Outputs:
       Name: !Sub '${AWS::StackName}-InstanceRoleName'
 
 Conditions:
-    SpotPriceSet:
-      !Not [ !Equals [ !Ref SpotPrice, 0 ] ]
-
     CreateVpcResources:
       !Equals [ !Ref VpcId, "" ]
 
     CreateSecurityGroup:
-      !Equals [ !Ref SecurityGroupId, "" ]
+      !Equals [ !Ref SecurityGroupIds, "" ]
 
     CreateSecretsBucket:
       !And
@@ -601,16 +626,16 @@ Conditions:
       !Equals [ !Ref RootVolumeName, "" ]
 
     UseInstanceType2:
-      !Not [ !Equals [ !Select [ "1", !Split [ ",", !Join [ ",", [ !Ref InstanceType, "", "", "" ] ] ] ], ""] ]
+      !Not [ !Equals [ !Select [ "1", !Split [ ",", !Join [ ",", [ !Ref InstanceTypes, "", "", "" ] ] ] ], ""] ]
 
     UseInstanceType3:
-      !Not [ !Equals [ !Select [ "2", !Split [ ",", !Join [ ",", [ !Ref InstanceType, "", "", "" ] ] ] ], ""] ]
+      !Not [ !Equals [ !Select [ "2", !Split [ ",", !Join [ ",", [ !Ref InstanceTypes, "", "", "" ] ] ] ], ""] ]
 
     UseInstanceType4:
-      !Not [ !Equals [ !Select [ "3", !Split [ ",", !Join [ ",", [ !Ref InstanceType, "", "", "" ] ] ] ], ""] ]
+      !Not [ !Equals [ !Select [ "3", !Split [ ",", !Join [ ",", [ !Ref InstanceTypes, "", "", "" ] ] ] ], ""] ]
 
     UseManagedPolicyARN:
-      !Not [ !Equals [ !Join [ "", !Ref ManagedPolicyARN ], "" ] ]
+      !Not [ !Equals [ !Join [ "", !Ref ManagedPolicyARNs ], "" ] ]
 
     UseECR:
       !Not [ !Equals [ !Ref ECRAccessPolicy, "none" ] ]
@@ -655,27 +680,34 @@ Conditions:
     # into using a Custom Resource.
     UsingArmInstances:
       !Or
-        - !Equals [ !Select [ 0, !Split [ ".", !Ref InstanceType ] ], "a1" ]
+        - !Equals [ !Select [ 0, !Split [ ".", !Ref InstanceTypes ] ], "a1" ]
         - !Or
-          - !Equals [ !Select [ 0, !Split [ ".", !Ref InstanceType ] ], "c6g" ]
-          - !Equals [ !Select [ 0, !Split [ ".", !Ref InstanceType ] ], "c6gd" ]
-          - !Equals [ !Select [ 0, !Split [ ".", !Ref InstanceType ] ], "c6gn" ]
-          - !Equals [ !Select [ 0, !Split [ ".", !Ref InstanceType ] ], "c7g" ]
-          - !Equals [ !Select [ 0, !Split [ ".", !Ref InstanceType ] ], "c7gn" ]
-        - !Equals [ !Select [ 0, !Split [ ".", !Ref InstanceType ] ], "g5g" ]
+          - !Equals [ !Select [ 0, !Split [ ".", !Ref InstanceTypes ] ], "c6g" ]
+          - !Equals [ !Select [ 0, !Split [ ".", !Ref InstanceTypes ] ], "c6gd" ]
+          - !Equals [ !Select [ 0, !Split [ ".", !Ref InstanceTypes ] ], "c6gn" ]
+          - !Equals [ !Select [ 0, !Split [ ".", !Ref InstanceTypes ] ], "c7g" ]
+          - !Equals [ !Select [ 0, !Split [ ".", !Ref InstanceTypes ] ], "c7gd" ]
+          - !Equals [ !Select [ 0, !Split [ ".", !Ref InstanceTypes ] ], "c7gn" ]
+        - !Equals [ !Select [ 0, !Split [ ".", !Ref InstanceTypes ] ], "g5g" ]
         - !Or
-          - !Equals [ !Select [ 0, !Split [ ".", !Ref InstanceType ] ], "Im4gn" ]
-          - !Equals [ !Select [ 0, !Split [ ".", !Ref InstanceType ] ], "Is4gen" ]
+          - !Equals [ !Select [ 0, !Split [ ".", !Ref InstanceTypes ] ], "i4g" ]
+          - !Equals [ !Select [ 0, !Split [ ".", !Ref InstanceTypes ] ], "Im4gn" ]
+          - !Equals [ !Select [ 0, !Split [ ".", !Ref InstanceTypes ] ], "Is4gen" ]
         - !Or
-          - !Equals [ !Select [ 0, !Split [ ".", !Ref InstanceType ] ], "m6g" ]
-          - !Equals [ !Select [ 0, !Split [ ".", !Ref InstanceType ] ], "m6gd" ]
-          - !Equals [ !Select [ 0, !Split [ ".", !Ref InstanceType ] ], "m7g" ]
+          - !Equals [ !Select [ 0, !Split [ ".", !Ref InstanceTypes ] ], "m6g" ]
+          - !Equals [ !Select [ 0, !Split [ ".", !Ref InstanceTypes ] ], "m6gd" ]
+          - !Equals [ !Select [ 0, !Split [ ".", !Ref InstanceTypes ] ], "m7g" ]
+          - !Equals [ !Select [ 0, !Split [ ".", !Ref InstanceTypes ] ], "m7gd" ]
         - !Or
-          - !Equals [ !Select [ 0, !Split [ ".", !Ref InstanceType ] ], "r6g" ]
-          - !Equals [ !Select [ 0, !Split [ ".", !Ref InstanceType ] ], "r6gd" ]
-          - !Equals [ !Select [ 0, !Split [ ".", !Ref InstanceType ] ], "r7g" ]
-        - !Equals [ !Select [ 0, !Split [ ".", !Ref InstanceType ] ], "t4g" ]
-        - !Equals [ !Select [ 0, !Split [ ".", !Ref InstanceType ] ], "x2gd" ]
+          - !Equals [ !Select [ 0, !Split [ ".", !Ref InstanceTypes ] ], "r6g" ]
+          - !Equals [ !Select [ 0, !Split [ ".", !Ref InstanceTypes ] ], "r6gd" ]
+          - !Equals [ !Select [ 0, !Split [ ".", !Ref InstanceTypes ] ], "r7g" ]
+          - !Equals [ !Select [ 0, !Split [ ".", !Ref InstanceTypes ] ], "r7gd" ]
+        - !Equals [ !Select [ 0, !Split [ ".", !Ref InstanceTypes ] ], "t4g" ]
+        - !Equals [ !Select [ 0, !Split [ ".", !Ref InstanceTypes ] ], "x2gd" ]
+
+    UseStackNameForInstanceName:
+      !Equals [ !Ref InstanceName, "" ]
 
 Mappings:
   ECRManagedPolicy:
@@ -825,7 +857,7 @@ Resources:
                # This may support multiple values of its own (separated by commas)
                - !If
                  - UseManagedPolicyARN
-                 - !Join [ ',', !Ref ManagedPolicyARN ]
+                 - !Join [ ',', !Ref ManagedPolicyARNs ]
                  - !Ref 'AWS::NoValue'
           - !Ref 'AWS::NoValue'
       Policies:
@@ -1065,11 +1097,11 @@ Resources:
           NetworkInterfaces:
             - DeviceIndex: 0
               AssociatePublicIpAddress: { Ref: AssociatePublicIpAddress }
-              Groups: !Split [ ",", !If [ "CreateSecurityGroup", !Ref SecurityGroup, !Ref SecurityGroupId ] ]
+              Groups: !Split [ ",", !If [ "CreateSecurityGroup", !Ref SecurityGroup, !Ref SecurityGroupIds ] ]
           KeyName: !If [ "HasKeyName", !Ref KeyName, !Ref 'AWS::NoValue' ]
           IamInstanceProfile:
             Arn: !GetAtt "IAMInstanceProfile.Arn"
-          InstanceType: !Select [ "0", !Split [ ",", !Join [ ",", [ !Ref InstanceType, "", "", "" ] ] ] ]
+          InstanceType: !Select [ "0", !Split [ ",", !Join [ ",", [ !Ref InstanceTypes, "", "", "" ] ] ] ]
           MetadataOptions:
             HttpTokens: !Ref IMDSv2Tokens
             # Allow containers using a Docker network on the host to receive IDMSv2 responses
@@ -1108,7 +1140,7 @@ Resources:
                 - Key: Role
                   Value: buildkite-agent
                 - Key: Name
-                  Value: !Ref InstanceName
+                  Value: !If [ UseStackNameForInstanceName, !Ref "AWS::StackName", !Ref InstanceName ]
                 - Key: BuildkiteAgentRelease
                   Value: !Ref BuildkiteAgentRelease
                 - Key: BuildkiteQueue
@@ -1118,6 +1150,14 @@ Resources:
                   - Key: !Ref CostAllocationTagName
                     Value: !Ref CostAllocationTagValue
                   - !Ref "AWS::NoValue"
+            - !If
+              - UseCostAllocationTags
+              - ResourceType: volume
+                Tags:
+                  - Key: !Ref CostAllocationTagName
+                    Value: !Ref CostAllocationTagValue
+              - !Ref "AWS::NoValue"
+
           UserData:
             Fn::Base64: !If
               - UseWindowsAgents
@@ -1141,7 +1181,7 @@ Resources:
                   $Env:BUILDKITE_AGENT_TRACING_BACKEND="${BuildkiteAgentTracingBackend}"
                   $Env:BUILDKITE_AGENT_RELEASE="${BuildkiteAgentRelease}"
                   $Env:BUILDKITE_QUEUE="${BuildkiteQueue}"
-                  $Env:BUILDKITE_AGENT_ENABLE_GIT_MIRRORS_EXPERIMENT="${EnableAgentGitMirrorsExperiment}"
+                  $Env:BUILDKITE_AGENT_ENABLE_GIT_MIRRORS="${BuildkiteAgentEnableGitMirrors}"
                   $Env:BUILDKITE_ELASTIC_BOOTSTRAP_SCRIPT="${BootstrapScriptUrl}"
                   $Env:BUILDKITE_ENV_FILE_URL="${AgentEnvFileUrl}"
                   $Env:BUILDKITE_AUTHORIZED_USERS_URL="${AuthorizedUsersUrl}"
@@ -1166,11 +1206,18 @@ Resources:
                   Content-Type: multipart/mixed; boundary="==BOUNDARY=="
                   MIME-Version: 1.0
                   --==BOUNDARY==
-                  Content-Type: text/cloud-boothook; charset="us-ascii"
+                  Content-Type: text/cloud-config; charset="us-ascii"
+                  #cloud-config
+                  cloud_final_modules:
+                    - [scripts-user, always]
+                  --==BOUNDARY==
+                  Content-Type: text/x-shellscript; charset="us-ascii"
+                  #!/bin/bash -v
                   BUILDKITE_ENABLE_INSTANCE_STORAGE="${EnableInstanceStorage}" \
                     /usr/local/bin/bk-mount-instance-storage.sh
                   --==BOUNDARY==
-                  Content-Type: text/cloud-boothook; charset="us-ascii"
+                  Content-Type: text/x-shellscript; charset="us-ascii"
+                  #!/bin/bash -v
                   DOCKER_USERNS_REMAP=${EnableDockerUserNamespaceRemap} \
                   DOCKER_EXPERIMENTAL=${EnableDockerExperimental} \
                   BUILDKITE_ENABLE_INSTANCE_STORAGE="${EnableInstanceStorage}" \
@@ -1190,8 +1237,9 @@ Resources:
                   BUILDKITE_AGENT_EXPERIMENTS="${BuildkiteAgentExperiments}" \
                   BUILDKITE_AGENT_TRACING_BACKEND="${BuildkiteAgentTracingBackend}" \
                   BUILDKITE_AGENT_RELEASE="${BuildkiteAgentRelease}" \
+                  BUILDKITE_AGENT_CANCEL_GRACE_PERIOD="${BuildkiteAgentCancelGracePeriod}" \
                   BUILDKITE_QUEUE="${BuildkiteQueue}" \
-                  BUILDKITE_AGENT_ENABLE_GIT_MIRRORS_EXPERIMENT="${EnableAgentGitMirrorsExperiment}" \
+                  BUILDKITE_AGENT_ENABLE_GIT_MIRRORS="${BuildkiteAgentEnableGitMirrors}" \
                   BUILDKITE_ELASTIC_BOOTSTRAP_SCRIPT="${BootstrapScriptUrl}" \
                   BUILDKITE_ENV_FILE_URL=${AgentEnvFileUrl} \
                   BUILDKITE_ENABLE_INSTANCE_STORAGE="${EnableInstanceStorage}" \
@@ -1222,26 +1270,25 @@ Resources:
       VPCZoneIdentifier: !If [ "CreateVpcResources", [ !Ref Subnet0, !Ref Subnet1 ], !Ref Subnets ]
       MixedInstancesPolicy:
         InstancesDistribution:
-          OnDemandPercentageAboveBaseCapacity: !If [ SpotPriceSet, 0, !Ref OnDemandPercentage ]
-          SpotAllocationStrategy: capacity-optimized
-          SpotMaxPrice: !If [SpotPriceSet, !Ref SpotPrice, !Ref "AWS::NoValue"]
+          OnDemandPercentageAboveBaseCapacity: !Ref OnDemandPercentage
+          SpotAllocationStrategy: !Ref SpotAllocationStrategy
         LaunchTemplate:
           LaunchTemplateSpecification:
             LaunchTemplateId: !Ref AgentLaunchTemplate
             Version: !GetAtt "AgentLaunchTemplate.LatestVersionNumber"
           Overrides:
-          - InstanceType: !Select [ "0", !Split [ ",", !Join [ ",", [ !Ref InstanceType, "", "", "" ] ] ] ]
+          - InstanceType: !Select [ "0", !Split [ ",", !Join [ ",", [ !Ref InstanceTypes, "", "", "" ] ] ] ]
           - !If
             - UseInstanceType2
-            - InstanceType: !Select [ "1", !Split [ ",", !Join [ ",", [ !Ref InstanceType, "", "", "" ] ] ] ]
+            - InstanceType: !Select [ "1", !Split [ ",", !Join [ ",", [ !Ref InstanceTypes, "", "", "" ] ] ] ]
             - !Ref "AWS::NoValue"
           - !If
             - UseInstanceType3
-            - InstanceType: !Select [ "2", !Split [ ",", !Join [ ",", [ !Ref InstanceType, "", "", "" ] ] ] ]
+            - InstanceType: !Select [ "2", !Split [ ",", !Join [ ",", [ !Ref InstanceTypes, "", "", "" ] ] ] ]
             - !Ref "AWS::NoValue"
           - !If
             - UseInstanceType4
-            - InstanceType: !Select [ "3", !Split [ ",", !Join [ ",", [ !Ref InstanceType, "", "", "" ] ] ] ]
+            - InstanceType: !Select [ "3", !Split [ ",", !Join [ ",", [ !Ref InstanceTypes, "", "", "" ] ] ] ]
             - !Ref "AWS::NoValue"
       MinSize: !Ref MinSize
       MaxSize: !Ref MaxSize
@@ -1314,7 +1361,7 @@ Resources:
               cfnresponse.send(event, context, cfnresponse.FAILED, {}, "CustomResourcePhysicalID")
       Handler: index.handler
       Role: !GetAtt AsgProcessSuspenderRole.Arn
-      Runtime: 'python3.7'
+      Runtime: 'python3.10'
 
   AzRebalancingSuspender:
     Type: AWS::CloudFormation::CustomResource
@@ -1361,3 +1408,5 @@ Resources:
         AgentAutoScaleGroup: !Ref AgentAutoScaleGroup
         ScaleOutFactor: !Ref ScaleOutFactor
         ScaleOutForWaitingJobs: !Ref ScaleOutForWaitingJobs
+        EventSchedulePeriod: !Ref ScalerEventSchedulePeriod
+        MinPollInterval: !Ref ScalerMinPollInterval

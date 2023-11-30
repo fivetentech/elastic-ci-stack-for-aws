@@ -4,6 +4,250 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [v6.10.0](https://github.com/buildkite/elastic-ci-stack-for-aws/tree/v6.10.0) (2023-11-02)
+[Full Changelog](https://github.com/buildkite/elastic-ci-stack-for-aws/compare/v6.9.0...v6.10.0)
+
+### Added
+- Enable optionally changing EC2 Instance Types used for AMI Creation [#1252](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1252) (@tomowatt)
+- Add support for graviton3 with local nvme [#1253](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1253) (@joemiller)
+
+### Fixed
+- Build fix-perms in Makefile [#1254](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1254) (@DrJosh9000)
+
+### Changed
+- Bump agent version to v3.58.0 [#1256](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1256) (@DrJosh9000)
+
+### Internal
+- Mention docker 20.10.25 to 24.0.5 upgrade in v6.8.0 changelog [#1249](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1249) (@yob)
+
+## [v6.9.0](https://github.com/buildkite/elastic-ci-stack-for-aws/tree/v6.9.0) (2023-10-23)
+[Full Changelog](https://github.com/buildkite/elastic-ci-stack-for-aws/compare/v6.8.0...v6.9.0)
+
+### Fixed
+- Instances in ASGs at their minimum capacity will now be correctly terminated when `BuildkiteTerminateInstanceAfterJob` is enabled [#1245](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1245)
+- Fix ScalerEventSchedulePeriod was missing from interface [#1243](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1243)
+
+### Changed
+- Update buildkite-agent to v3.57.0 [#1247](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1247) (@moskyb)
+- Add more missing service role IAM permissions [#1244](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1244) (@triarius)
+
+### Internal
+- Update README to show we are on Amazon Linux 2023 now [#1246](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1246) (@triarius)
+
+## [v6.8.0](https://github.com/buildkite/elastic-ci-stack-for-aws/tree/v6.8.0) (2023-10-19)
+[Full Changelog](https://github.com/buildkite/elastic-ci-stack-for-aws/compare/v6.7.1...v6.8.0)
+
+### Changed
+- Bump Agent Scaler version to v1.7.0. This updates the lambda runtime to `provided.al2` from the deprecated `go1.x` [#1236](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1236) (@HugeIRL)
+  Note: depending on how you upgrade existing stacks, you may not automatically be upgraded to v1.7.0 of Buildkite Agent Scaler. See [here](https://github.com/buildkite/elastic-ci-stack-for-aws/issues/1172#issuecomment-1697304023) for a work around to this known issue.
+- Bump buildkite-agent to v3.56.0 [#1237](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1237) (@triarius)
+- Bump docker-compose to v2.22.0 [#1234](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1234) (@jkburges)
+- Improve logging for startup scripts on linux [#1230](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1230) (@triarius)
+- Wrap quotes around AWS::StackName [#1238](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1238) (@n-tucker)
+- Docker upgraded from from 20.10.25 to 24.0.5 [Amazon Linux 2023 changelog](https://docs.aws.amazon.com/linux/al2023/release-notes/relnotes-2023.2.20230920.html)
+
+### Fixed
+- Fix rsyslog was missing from base AMI [#1240](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1240) (@peter-svensson)
+- Fix Service Role was missing some permissions [#1192](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1192) (@philnielsen) [#1233](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1233) (@triarius)
+- Fix hyphens were not allowed in InstanceTypes [#1228](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1228) (@nitrocode)
+- Fix qemu binfmt image is pulled during instance startup [#1231](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1231) (@triarius)
+
+### Internal
+- Fix Windows AMI build failed [#1239](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1239) (@triarius)
+- Add test stack remover script [#1226](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1226) (@moskyb)
+- Add a step to CI to check files have been formatted with shfmt [#1232](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1232) (@triarius)
+
+## [v6.7.1](https://github.com/buildkite/elastic-ci-stack-for-aws/tree/v6.7.1) (2023-09-20)
+[Full Changelog](https://github.com/buildkite/elastic-ci-stack-for-aws/compare/v6.7.0...v6.7.1)
+
+### Security
+⚠️ This release fixes a medium-severity security vulnerability. We recommend upgrading to v6.7.1 or v5.22.5.
+
+- Affected versions: All prior versions of Elastic CI Stack (except v5.22.5). v6.7.0 and v5.22.4 contained a partial fix.
+- Impact: Privilege escalation to root on Linux agent instances
+- Required privileges: Users that can run user-controlled commands on agents (e.g. by pushing a branch to a repo that triggers a build with those changes)
+- Attack vector: A specially crafted build can abuse the `fix-buildkite-agent-builds-permissions` script to run commands as root on subsequent builds
+- Fix: Improved input validation and file handling [#1219](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1219), [#1221](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1221) (@DrJosh9000)
+- Alternative workarounds: Deploy a [pre-bootstrap hook](https://buildkite.com/docs/agent/v3/securing#strict-checks-using-a-pre-bootstrap-hook) to prevent execution of `fix-buildkite-agent-builds-permissions` during a build
+
+## [v5.22.5](https://github.com/buildkite/elastic-ci-stack-for-aws/tree/v5.22.5) (2023-09-14)
+[Full Changelog](https://github.com/buildkite/elastic-ci-stack-for-aws/compare/v5.22.4...v5.22.5)
+
+### Security
+⚠️ This release fixes a medium-severity security vulnerability (same as described in v6.7.1).
+- Fix: Improved input validation and file handling [#1220](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1220) (@DrJosh9000)
+
+## [v6.7.0](https://github.com/buildkite/elastic-ci-stack-for-aws/tree/v6.7.0) (2023-09-14)
+[Full Changelog](https://github.com/buildkite/elastic-ci-stack-for-aws/compare/v6.6.0...v6.7.0)
+
+### Security
+⚠️ This release **partially** fixes a medium-severity security vulnerability. We recommend upgrading to v6.7.1 or v5.22.5.
+
+### Changed
+- Prevent permission script acting on symlinks [#1212](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1212) (@DrJosh9000)
+- Update to scaler v1.6.0 [#1213](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1213) (@DrJosh9000)
+- Bump buildkite-agent to v3.55.0 [#1214](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1214) (@DrJosh9000)
+
+### Internal
+- Fix ami_source_filter [#1211](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1211) (@DrJosh9000)
+
+## [v5.22.4](https://github.com/buildkite/elastic-ci-stack-for-aws/tree/v5.22.4) (2023-09-14)
+[Full Changelog](https://github.com/buildkite/elastic-ci-stack-for-aws/compare/v5.22.3...v5.22.4)
+
+### Security
+⚠️ This release **partially** fixes a medium-severity security vulnerability (same as described in v6.7.1). We recommend upgrading to v6.7.1 or v5.22.5.
+
+### Changed
+- Prevent permission script acting on symlinks [#1215](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1215) (@DrJosh9000)
+
+## [v6.6.0](https://github.com/buildkite/elastic-ci-stack-for-aws/tree/v6.6.0) (2023-09-07)
+[Full Changelog](https://github.com/buildkite/elastic-ci-stack-for-aws/compare/v6.5.0...v6.6.0)
+
+### Fixed
+- Fix instance storage mount script fails when instance storage not available [#1206](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1206) (@triarius)
+
+### Changed
+- Bump buildkite-agent to v3.54.0 [#1207](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1207) (@DrJosh9000)
+
+## [v6.5.0](https://github.com/buildkite/elastic-ci-stack-for-aws/tree/v6.5.0) (2023-08-31)
+[Full Changelog](https://github.com/buildkite/elastic-ci-stack-for-aws/compare/v6.4.0...v6.5.0)
+
+### Changed
+- Bump buildkite-agent to v3.53.0 [#1204](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1204) (@DrJosh9000)
+
+## [v6.4.0](https://github.com/buildkite/elastic-ci-stack-for-aws/tree/v6.4.0) (2023-08-24)
+[Full Changelog](https://github.com/buildkite/elastic-ci-stack-for-aws/compare/v6.3.0...v6.4.0)
+
+### Changed
+- Bump docker-compose to v2.20.3 [#1201](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1201) (@triarius)
+- Bump buildkite-agent to v3.52.1 [#1200](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1200) (@triarius)
+- Change the Community Slack links in documentation to Forum ones [#1199](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1199) (@mcncl)
+
+### Internal
+- Prevent tag builds from publishing a latest template when they are not "on the main branch" [#1197](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1197) (@triarius)
+
+## [v6.3.0](https://github.com/buildkite/elastic-ci-stack-for-aws/tree/v6.3.0) (2023-08-16)
+[Full Changelog](https://github.com/buildkite/elastic-ci-stack-for-aws/compare/v6.2.0...v6.3.0)
+
+### Changed
+- Bump buildkite-agent to v3.51.0 [#1193](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1193) (@triarius)
+- Bump `git-lfs` to v3.4.0 [#1191](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1191) (@triarius)
+
+### Fix
+- Fix `mdadm` is not installed, leading to broken instance storage when there is more than one volumes [#1190](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1190) (@triarius)
+
+### Internal
+- Incorporated CHANGELOG for v5.22.3 [#1189](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1189) (@triarius)
+
+## [v6.2.0](https://github.com/buildkite/elastic-ci-stack-for-aws/tree/v6.2.0) (2023-08-09)
+[Full Changelog](https://github.com/buildkite/elastic-ci-stack-for-aws/compare/v6.1.0...v6.2.0)
+
+### Changed
+- Change base image to Windows Server 2019 w/o containers and install Docker CE (v24.0.5) [#1180](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1180) (@triarius)
+- Add cost allocation tags to EBS volumes [#1171](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1171) (@keatmin)
+
+### Fixed
+- Add missing authorized keys systemd units [#1184](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1184) (@sj26)
+- Fix instance storage docker dir not created [#1181](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1181) (@triarius)
+- Fix `set -e` fails from environment hooks [#1179](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1179) (@triarius)
+
+## [v6.1.0](https://github.com/buildkite/elastic-ci-stack-for-aws/tree/v6.1.0) (2023-08-01)
+[Full Changelog](https://github.com/buildkite/elastic-ci-stack-for-aws/compare/v6.0.0...v6.1.0)
+
+### Changed
+- Bump buildkite-agent to v3.50.4 [#1177](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1177) (@DrJosh9000)
+- Disable client side pager for aws-cli v2 for the buildkite-agent user [#1174](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1174) (@triarius)
+- Add `ScalerMinPollInterval` param [#1173](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1173) (@amartani)
+
+## [v6.0.0](https://github.com/buildkite/elastic-ci-stack-for-aws/tree/v6.0.0) (2023-07-26)
+[Full Changelog](https://github.com/buildkite/elastic-ci-stack-for-aws/compare/v5.22.2...v6.0.0)
+
+### Changed
+- Upgrade base image to Amazon Linux 2023 [#1122](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1122) (@triarius)
+    - Many packages have been added, upgraded, or removed since Amazon Linux 2. We've explicitly called out what's been intentionally left out by us below. Refer to [docs.aws.amazon.com/linux/al2023/ug/compare-with-al2.html](https://docs.aws.amazon.com/linux/al2023/ug/compare-with-al2.html) for the changes Amazon have made.
+- Publish template to both `main` and `master` [#1129](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1129) (@triarius)
+- Increase job cancel grace period to 60s [#1144](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1144) (@triarius)
+- Allow the `MaxSize` to be 0 [#1140](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1140) (@triarius)
+- Default EC2 instance names to stack name [#1137](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1137) (@triarius)
+- Rename the parameter `InstanceType` to `InstanceTypes` [#1138](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1138) (@triarius)
+- Rename the parameter `ManagedPolicyARN` to `ManagedPolicyARNs` [#1138](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1138) (@triarius)
+- Rename the parameter `SecurityGroupId` to `SecurityGroupIds` [#1128](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1128) (@triarius)
+- Rename the parameter `EnableAgentGitMirrorsExperiment` to `BuildkiteAgentEnableGitMirrors` [#1123](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1123) (@triarius)
+- Enable the `ansi-timestamps` setting if and only if `BuildkiteAgentTimestampLines` parameter is `"false"` [#1132](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1132) (@triarius)
+- Bump buildkite-agent-scaler to v1.5.0 [#1169](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1169) (@tomellis91)
+- Bump docker compose to v2.20.2 [#1150](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1150) (@triarius)
+- Bump buildx to v0.11.2 [#1150](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1150) (@triarius)
+
+### Added
+- Support running and building multi-platform docker images [#1139](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1139) [#1122](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1122) [#1149](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1149) (@triarius)
+- Support i4g instance types [#1138](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1138) (@triarius)
+- Added the parameter `SpotAllocationStrategy` [#1130](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1130) (@triarius)
+- Added the parameter `ScalerEventScheduleRate` to control rate at which buildkite-agent-scaler is invoked [#1169](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1169) (@tomellis91)
+
+### Fixed
+- Guard against `BUILDKITE_AGENT_ENABLE_GIT_MIRRORS` not being set in startup script [#1135](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1135) (@triarius)
+
+### Removed
+- Remove deprecated `SpotPrice` parameter [#1130](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1130) (@triarius)
+- Removed packages. These packages are either not available on Amazon Linux 2023, or not installed by default on the base image we use. We have decided to not install them as suitable replacements may be found.
+  - Python 2
+  - OpenSSL v1.0
+  - AWS CLI v1
+  - Docker-Compose v1
+    - The `docker-compose` executable will prepend the `--compatibility` flag to docker-compose v2 [#1148](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1148) (@triarius)
+  - Cronie
+
+## [v5.22.3](https://github.com/buildkite/elastic-ci-stack-for-aws/tree/v5.22.3) (2023-08-10)
+[Full Changelog](https://github.com/buildkite/elastic-ci-stack-for-aws/compare/v5.22.2...v5.22.3)
+
+### Changed
+- Bump buildkite-agent to v3.50.4 [#1186](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1186) (@triarius)
+- Use windows server 2019 base image and docker ce [#1187](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1187) (@triarius)
+
+## [v5.22.2](https://github.com/buildkite/elastic-ci-stack-for-aws/tree/v5.22.2) (2023-07-24)
+[Full Changelog](https://github.com/buildkite/elastic-ci-stack-for-aws/compare/v5.22.1...v5.22.2)
+
+### Changed
+- Bump buildkite-agent to v3.50.3 [#1164](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1164) (@DrJosh9000)
+
+### Internal
+- Set `allow_dependency_failure: true` on stack cleanup jobs [#1159](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1159) (@triarius)
+
+## [v5.22.1](https://github.com/buildkite/elastic-ci-stack-for-aws/tree/v5.22.1) (2023-07-21)
+[Full Changelog](https://github.com/buildkite/elastic-ci-stack-for-aws/compare/v5.22.0...v5.22.1)
+
+### Changed
+- Bump buildkite-agent to v3.50.2 [#1161](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1161) (@triarius)
+
+## [v5.22.0](https://github.com/buildkite/elastic-ci-stack-for-aws/tree/v5.22.0) (2023-07-20)
+[Full Changelog](https://github.com/buildkite/elastic-ci-stack-for-aws/compare/v5.21.0...v5.22.0)
+
+### Changed
+- Bump buildkite-agent to v3.50.1 [#1157](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1157) (@DrJosh9000)
+- Handle hard failures (eg. kernel panic) during bootstrap [#1143](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1143) (@trvrnrth)
+- Backport de-experimentifying git-mirrors [#1141](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1141) (@triarius)
+- Enable ansi-timestamps iff BuildkiteAgentTimestampLines is false [#1132](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1132) (@triarius)
+- Don't (re)install docker (on Windows) [#1136](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1136) (@triarius)
+
+## [v5.21.0](https://github.com/buildkite/elastic-ci-stack-for-aws/tree/v5.21.0) (2023-05-25)
+[Full Changelog](https://github.com/buildkite/elastic-ci-stack-for-aws/compare/v5.20.0...v5.21.0)
+
+### Changed
+- Bump `buildkite-agent` to v3.47.0 [#1120](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1120) (@DrJosh9000)
+- Bumping python from 3.7 to 3.10 [#1117](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1117) (@123sarahj123)
+- Bump Docker buildx from 0.10.4 to 0.10.5 [#1119](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1119) (@orien)
+- Bump `buildkite-agent-scaler` to v1.4.0 [#1118](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1118) (@triarius)
+
+## [5.20.0](https://github.com/buildkite/elastic-ci-stack-for-aws/tree/5.20.0) (2023-05-05)
+[Full Changelog](https://github.com/buildkite/elastic-ci-stack-for-aws/compare/v5.19.0...5.20.0)
+
+### Changed
+- Bump buildkite-agent to v3.46.0 [#1114](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1114) (@moskyb)
+- Update description of BuildkiteAdditionalSudoPermissions parameter [#1113](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1113) (@triarius)
+
+### Fixed
+- Error with docker experimental CLI [#1106](https://github.com/buildkite/elastic-ci-stack-for-aws/pull/1106) (@moskyb)
+
 ## [v5.19.0](https://github.com/buildkite/elastic-ci-stack-for-aws/tree/v5.19.0) (2023-04-24)
 [Full Changelog](https://github.com/buildkite/elastic-ci-stack-for-aws/compare/v5.18.0...v5.19.0)
 

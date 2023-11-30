@@ -72,6 +72,10 @@ function set_always() {
 Add-Content -Path C:\buildkite-agent\cfn-env -Value @"
 
 set_always         "BUILDKITE_AGENTS_PER_INSTANCE" "$Env:BUILDKITE_AGENTS_PER_INSTANCE"
+
+# also set via nssm
+set_always         "BUILDKITE_TERMINATE_INSTANCE_AFTER_JOB" "$Env:BUILDKITE_TERMINATE_INSTANCE_AFTER_JOB"
+
 set_always         "BUILDKITE_ECR_POLICY" "$Env:BUILDKITE_ECR_POLICY"
 set_always         "BUILDKITE_SECRETS_BUCKET" "$Env:BUILDKITE_SECRETS_BUCKET"
 set_always         "BUILDKITE_SECRETS_BUCKET_REGION" "$Env:BUILDKITE_SECRETS_BUCKET_REGION"
@@ -105,14 +109,17 @@ If (Test-Path Env:BUILDKITE_AGENT_TAGS) {
 }
 
 # Enable git-mirrors
-If ($Env:BUILDKITE_AGENT_ENABLE_GIT_MIRRORS_EXPERIMENT -eq "true") {
-  If ([string]::IsNullOrEmpty($Env:BUILDKITE_AGENT_EXPERIMENTS)) {
-    $Env:BUILDKITE_AGENT_EXPERIMENTS = "git-mirrors"
-  }
-  Else {
-    $Env:BUILDKITE_AGENT_EXPERIMENTS += ",git-mirrors"
-  }
+If ($Env:BUILDKITE_AGENT_ENABLE_GIT_MIRRORS -eq "true") {
   $Env:BUILDKITE_AGENT_GIT_MIRRORS_PATH = "C:\buildkite-agent\git-mirrors"
+}
+
+# Either you can have timestamp-lines xor ansi-timestamps.
+# There's no technical reason you can't have both, its a pragmatic decision to
+# simplify the avaliable parameters on the stack
+If ($Env:BUILDKITE_AGENT_TIMESTAMP_LINES -eq "true") {
+  $Env:BUILDKITE_AGENT_NO_ANSI_TIMESTAMPS = "true"
+} Else {
+  $Env:BUILDKITE_AGENT_NO_ANSI_TIMESTAMPS = "false"
 }
 
 # Get token from ssm param (if we have a path)
@@ -126,6 +133,7 @@ name="${Env:BUILDKITE_STACK_NAME}-${Env:INSTANCE_ID}-%spawn"
 token="${Env:BUILDKITE_AGENT_TOKEN}"
 tags=$agent_metadata
 tags-from-ec2-meta-data=true
+no-ansi-timestamps=${Env:BUILDKITE_AGENT_NO_ANSI_TIMESTAMPS}
 timestamp-lines=${Env:BUILDKITE_AGENT_TIMESTAMP_LINES}
 hooks-path="C:\buildkite-agent\hooks"
 build-path="C:\buildkite-agent\builds"
@@ -142,7 +150,7 @@ tracing-backend=${Env:BUILDKITE_AGENT_TRACING_BACKEND}
 "@
 $OFS=" "
 
-nssm set lifecycled AppEnvironmentExtra :AWS_REGION=$Env:AWS_REGION
+nssm set lifecycled AppEnvironmentExtra +AWS_REGION=$Env:AWS_REGION
 nssm set lifecycled AppEnvironmentExtra +LIFECYCLED_HANDLER="C:\buildkite-agent\bin\stop-agent-gracefully.ps1"
 Restart-Service lifecycled
 
@@ -208,26 +216,35 @@ Write-Output "Starting the Buildkite Agent"
 
 nssm install buildkite-agent C:\buildkite-agent\bin\buildkite-agent.exe start
 If ($lastexitcode -ne 0) { Exit $lastexitcode }
+
 nssm set buildkite-agent ObjectName .\$UserName $Password
 If ($lastexitcode -ne 0) { Exit $lastexitcode }
+
 nssm set buildkite-agent AppStdout C:\buildkite-agent\buildkite-agent.log
 If ($lastexitcode -ne 0) { Exit $lastexitcode }
+
 nssm set buildkite-agent AppStderr C:\buildkite-agent\buildkite-agent.log
 If ($lastexitcode -ne 0) { Exit $lastexitcode }
-nssm set buildkite-agent AppEnvironmentExtra :HOME=C:\buildkite-agent
+
+nssm set buildkite-agent AppEnvironmentExtra +HOME=C:\buildkite-agent
 
 If ((![string]::IsNullOrEmpty($Env:BUILDKITE_ENV_FILE_URL)) -And (Test-Path -Path C:\buildkite-agent\env -PathType leaf)) {
   foreach ($var in Get-Content C:\buildkite-agent\env) {
-    nssm set buildkite-agent AppEnvironmentExtra $var
+    nssm set buildkite-agent AppEnvironmentExtra "+$var"
     If ($lastexitcode -ne 0) { Exit $lastexitcode }
   }
 }
 
+# also set in cfn so it's show in job logs
+nssm set buildkite-agent AppEnvironmentExtra +BUILDKITE_TERMINATE_INSTANCE_AFTER_JOB=$Env:BUILDKITE_TERMINATE_INSTANCE_AFTER_JOB
 If ($lastexitcode -ne 0) { Exit $lastexitcode }
+
 nssm set buildkite-agent AppExit Default Restart
 If ($lastexitcode -ne 0) { Exit $lastexitcode }
+
 nssm set buildkite-agent AppRestartDelay 10000
 If ($lastexitcode -ne 0) { Exit $lastexitcode }
+
 nssm set buildkite-agent AppEvents Exit/Post "powershell C:\buildkite-agent\bin\terminate-instance.ps1"
 If ($lastexitcode -ne 0) { Exit $lastexitcode }
 

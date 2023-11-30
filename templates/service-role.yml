@@ -181,7 +181,10 @@ Resources:
                 "lambda:RemovePermission",
                 "lambda:DeleteFunction",
                 "lambda:InvokeFunction",
-                "lambda:TagResource"
+                "lambda:TagResource",
+                "lambda:UpdateFunctionConfiguration",
+                "lambda:UpdateFunctionCode",
+                "lambda:ListTags"
               ],
               "Resource": "arn:aws:lambda:*:*:function:*"
             },
@@ -190,7 +193,8 @@ Resources:
               "Action": [
                 "logs:CreateLogGroup",
                 "logs:PutRetentionPolicy",
-                "logs:DeleteLogGroup"
+                "logs:DeleteLogGroup",
+                "logs:TagResource",
               ],
               "Resource": "arn:aws:logs:*:*:log-group:*"
             },
@@ -276,6 +280,7 @@ Resources:
                 "autoscaling:DescribeScalingProcessTypes",
                 "autoscaling:DescribeScheduledActions",
                 "autoscaling:DescribeAutoScalingGroups",
+                "autoscaling:DescribeAutoScalingInstances",
                 "autoscaling:DescribeLifecycleHooks",
                 "autoscaling:SetDesiredCapacity",
                 "autoscaling:PutLifecycleHook",
@@ -283,6 +288,7 @@ Resources:
                 "autoscaling:SetInstanceProtection",
                 "autoscaling:CreateAutoScalingGroup",
                 "autoscaling:EnableMetricsCollection",
+                "autoscaling:DisableMetricsCollection",
                 "autoscaling:UpdateAutoScalingGroup",
                 "autoscaling:DeleteAutoScalingGroup",
                 "autoscaling:PutScalingPolicy",
@@ -293,7 +299,8 @@ Resources:
                 "autoscaling:PutWarmPool",
                 "autoscaling:DeleteWarmPool",
                 "autoscaling:TerminateInstanceInAutoScalingGroup",
-                "autoscaling:AttachInstances"
+                "autoscaling:AttachInstances",
+                "autoscaling:DisableMetricsCollection"
               ],
               "Resource": "*"
             },

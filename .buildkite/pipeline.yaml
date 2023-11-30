@@ -7,14 +7,20 @@ steps:
     agents:
       queue: "${BUILDKITE_AGENT_META_DATA_QUEUE}"
 
-  - id: "bats-tests"
-    name: ":bash: Unit tests"
+  - label: ":bash: shfmt"
+    key: fmt
+    command: .buildkite/steps/shfmt.sh
+    agents:
+      queue: "${BUILDKITE_AGENT_META_DATA_QUEUE}"
+
+  - id: "fixperms-tests"
+    name: ":go: fixperms tests"
     agents:
       queue: "${BUILDKITE_AGENT_META_DATA_QUEUE}"
     plugins:
-      docker-compose#v2.1.0:
-        run: unit-tests
-        config: docker-compose.unit-tests.yml
+      - docker-compose#v2.1.0:
+          run: fixperms-tests
+          config: .buildkite/docker-compose.yml
 
   - id: "deploy-service-role-stack"
     name: ":aws-iam: :cloudformation:"
@@ -22,8 +28,9 @@ steps:
       queue: "${BUILDKITE_AGENT_META_DATA_QUEUE}"
     command: .buildkite/steps/deploy-service-role-stack.sh
     depends_on:
+      - "fmt"
       - "lint"
-      - "bats-tests"
+      - "fixperms-tests"
 
   - id: "packer-windows-amd64"
     name: ":packer: :windows:"
@@ -33,8 +40,9 @@ steps:
     agents:
       queue: "${BUILDKITE_AGENT_META_DATA_QUEUE}"
     depends_on:
+      - "fmt"
       - "lint"
-      - "bats-tests"
+      - "fixperms-tests"
 
   - id: "launch-windows-amd64"
     name: ":cloudformation: :windows: AMD64 Launch"
@@ -51,6 +59,7 @@ steps:
     command:
       - git --version
       - docker info
+      - docker run --rm mcr.microsoft.com/windows/nanoserver:ltsc2019 cmd.exe /c echo hello
     timeout_in_minutes: 5
     agents:
       stack: "buildkite-aws-stack-test-windows-amd64-${BUILDKITE_BUILD_NUMBER}"
@@ -61,6 +70,7 @@ steps:
   - id: "delete-windows-amd64"
     name: ":cloudformation: :windows: AMD64 Delete"
     command: .buildkite/steps/delete.sh windows amd64
+    allow_dependency_failure: true
     agents:
       queue: "${BUILDKITE_AGENT_META_DATA_QUEUE}"
     depends_on:
@@ -74,8 +84,9 @@ steps:
     agents:
       queue: "${BUILDKITE_AGENT_META_DATA_QUEUE}"
     depends_on:
+      - "fmt"
       - "lint"
-      - "bats-tests"
+      - "fixperms-tests"
 
   - id: "launch-linux-amd64"
     name: ":cloudformation: :linux: AMD64 Launch"
@@ -102,6 +113,7 @@ steps:
   - id: "delete-linux-amd64"
     name: ":cloudformation: :linux: AMD64 Delete"
     command: .buildkite/steps/delete.sh linux amd64
+    allow_dependency_failure: true
     agents:
       queue: "${BUILDKITE_AGENT_META_DATA_QUEUE}"
     depends_on:
@@ -115,8 +127,9 @@ steps:
     agents:
       queue: "${BUILDKITE_AGENT_META_DATA_QUEUE}"
     depends_on:
+      - "fmt"
       - "lint"
-      - "bats-tests"
+      - "fixperms-tests"
 
   - id: "launch-linux-arm64"
     name: ":cloudformation: :linux: ARM64 Launch"
@@ -143,6 +156,7 @@ steps:
   - id: "delete-linux-arm64"
     name: ":cloudformation: :linux: ARM64 Delete"
     command: .buildkite/steps/delete.sh linux arm64
+    allow_dependency_failure: true
     agents:
       queue: "${BUILDKITE_AGENT_META_DATA_QUEUE}"
     depends_on:
@@ -180,8 +194,8 @@ steps:
     artifact_paths: "build/*.yml"
     depends_on: "copy-ami"
 
-  - id: "cleanup"
-    name: "Cleanup"
+  - id: cleanup
+    name: ":broom: Cleanup"
     command: .buildkite/steps/cleanup.sh
     agents:
       queue: "${BUILDKITE_AGENT_META_DATA_QUEUE}"
