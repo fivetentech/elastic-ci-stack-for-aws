@@ -11,10 +11,10 @@ GO_VERSION ?= 1.21
 
 FIXPERMS_FILES = go.mod go.sum $(exec find internal/fixperms)
 
-AWS_REGION ?= us-east-1
+AWS_REGION ?= eu-central-1
 
 ARM64_INSTANCE_TYPE ?= m7g.xlarge
-AMD64_INSTANCE_TYPE ?= m7a.xlarge
+AMD64_INSTANCE_TYPE ?= m5.xlarge
 WIN64_INSTANCE_TYPE ?= m7i.xlarge
 
 BUILDKITE_BUILD_NUMBER ?= none

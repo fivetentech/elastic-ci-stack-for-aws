@@ -107,6 +107,18 @@ build {
   }
 
   provisioner "shell" {
+    script = "scripts/install-tailscale.sh"
+  }
+
+  provisioner "shell" {
+    script = "scripts/install-nix.sh"
+  }
+
+  provisioner "shell" {
+    script = "scripts/install-1password.sh"
+  }
+
+  provisioner "shell" {
     inline = ["rm /home/ec2-user/.ssh/authorized_keys"]
   }
 }
