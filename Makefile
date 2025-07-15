@@ -3,11 +3,11 @@
 VERSION = $(shell git describe --tags --candidates=1)
 SHELL = /bin/bash -o pipefail
 
-PACKER_VERSION ?= 1.9.4
+PACKER_VERSION ?= 1.11.2
 PACKER_LINUX_FILES = $(exec find packer/linux)
 PACKER_WINDOWS_FILES = $(exec find packer/windows)
 
-GO_VERSION ?= 1.21
+GO_VERSION ?= 1.23.6
 
 FIXPERMS_FILES = go.mod go.sum $(exec find internal/fixperms)
 
@@ -235,6 +235,8 @@ AGENT_VERSION ?= $(shell curl -Lfs "https://buildkite.com/agent/releases/latest?
 
 SED ?= sed
 ifeq ($(shell uname), Darwin)
+	# Use GNU sed, not MacOS sed
+	# Install with: brew install gsed
 	SED = gsed
 endif
 
@@ -242,11 +244,6 @@ bump-agent-version:
 	$(SED) -Ei "s/\[Buildkite Agent v.*\]/[Buildkite Agent v$(AGENT_VERSION)]/g" README.md
 	$(SED) -Ei "s/AGENT_VERSION=.+/AGENT_VERSION=$(AGENT_VERSION)/g" packer/linux/scripts/install-buildkite-agent.sh
 	$(SED) -Ei "s/\\\$$AGENT_VERSION = \".+\"/\$$AGENT_VERSION = \"$(AGENT_VERSION)\"/g" packer/windows/scripts/install-buildkite-agent.ps1
-
-validate: build/aws-stack.yml
-	aws --no-cli-pager cloudformation validate-template \
-		--output text \
-		--template-body "file://$(PWD)/build/aws-stack.yml"
 
 generate-toc:
 	docker run -it --rm -v "$(PWD):/app" node:slim bash \
